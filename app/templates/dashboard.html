@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – SMTP Relay{% endblock %}
+
+{% block content %}
+<h4 class="mb-4 fw-semibold"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Sent Today</div>
+        <div class="fs-2 fw-bold text-success">{{ emails_today_sent }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Failed Today</div>
+        <div class="fs-2 fw-bold text-danger">{{ emails_today_failed }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Sent This Week</div>
+        <div class="fs-2 fw-bold text-primary">{{ emails_week }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Active Credentials</div>
+        <div class="fs-2 fw-bold">{{ active_credentials }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if cred_stats %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold">Credential activity this week</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>Credential</th><th class="text-end">Total</th><th class="text-end">Sent</th></tr>
+      </thead>
+      <tbody>
+        {% for row in cred_stats %}
+        <tr>
+          <td class="monospace">{{ row.username }}</td>
+          <td class="text-end">{{ row.total }}</td>
+          <td class="text-end">{{ row.sent or 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">Recent emails</span>
+    <a href="{{ url_for('emails.index') }}" class="btn btn-sm btn-outline-secondary">View all</a>
+  </div>
+  {% if recent_emails %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Time</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Subject</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for email in recent_emails %}
+        <tr>
+          <td class="text-nowrap text-muted small">{{ email.received_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="monospace small">{{ email.from_addr }}</td>
+          <td class="monospace small">{{ email.get_to_addrs()|join(', ') }}</td>
+          <td>{{ email.subject or '(no subject)' }}</td>
+          <td>
+            <span class="badge badge-{{ email.status }}">{{ email.status }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted">No emails received yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

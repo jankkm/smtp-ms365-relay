@@ -1,0 +1,12 @@
+Flask
+authlib
+requests
+SQLAlchemy
+aiosmtpd
+msal
+httpx
+cryptography
+bcrypt
+APScheduler
+gunicorn
+python-dotenv

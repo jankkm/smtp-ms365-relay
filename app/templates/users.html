@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Users – SMTP Relay{% endblock %}
+
+{% block content %}
+<h4 class="fw-semibold mb-4"><i class="bi bi-people me-2"></i>Users</h4>
+<p class="text-muted small mb-3">
+  Users are registered automatically on their first login.
+  The first user to log in is granted admin rights.
+</p>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Admin</th>
+          <th>Registered</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.display_name or '—' }}</td>
+          <td class="monospace small">{{ user.email }}</td>
+          <td>
+            {% if user.is_admin %}
+              <span class="badge bg-primary">Admin</span>
+            {% else %}
+              <span class="badge bg-light text-dark border">User</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small text-nowrap">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+          <td class="text-end">
+            {% if user.id != session.user_id %}
+            <form method="post" action="{{ url_for('users.toggle_admin', user_id=user.id) }}" class="d-inline">
+              <button class="btn btn-sm {{ 'btn-outline-secondary' if user.is_admin else 'btn-outline-primary' }}">
+                {{ 'Revoke admin' if user.is_admin else 'Grant admin' }}
+              </button>
+            </form>
+            {% else %}
+            <span class="text-muted small">(you)</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
