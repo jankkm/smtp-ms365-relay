@@ -55,10 +55,19 @@ def cleanup_old_emails() -> None:
 
 def check_and_renew_cert() -> None:
     if config.SMTP_CERT_FILE and config.SMTP_KEY_FILE:
-        logger.info("Custom TLS cert configured — skipping auto-renewal.")
+        if cert_module.custom_cert_changed():
+            logger.info("Custom TLS certificate changed on disk — reloading SMTP SSL context.")
+            try:
+                cert_module.create_ssl_context()
+            except Exception as exc:
+                logger.error("Custom TLS cert/key invalid, skipping reload: %s", exc)
+                return
+            smtp_server.reload_ssl_context()
+            cert_module.record_loaded_cert()
         return
     cert_module.ensure_certificate()
     smtp_server.reload_ssl_context()
+    cert_module.record_loaded_cert()
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +87,7 @@ def _startup() -> None:
     logger.info("APScheduler started (email cleanup + cert renewal every 24 h)")
 
     smtp_server.start_smtp_server()
+    cert_module.record_loaded_cert()
     logger.info("=== Startup complete ===")
 
 

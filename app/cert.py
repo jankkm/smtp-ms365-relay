@@ -17,9 +17,42 @@ KEY_FILE = config.CERTS_DIR / "key.pem"
 RENEWAL_THRESHOLD_DAYS = 90
 CERT_VALIDITY_DAYS = 365
 
+# (serial_number, not_valid_after_utc) of the cert currently loaded by SMTP.
+_loaded_identity: tuple[int, datetime] | None = None
+
 
 def _custom_cert_configured() -> bool:
     return bool(config.SMTP_CERT_FILE and config.SMTP_KEY_FILE)
+
+
+def _active_cert_path() -> Path:
+    return Path(config.SMTP_CERT_FILE or CERT_FILE)
+
+
+def read_cert_identity(cert_path: Path | str) -> tuple[int, datetime]:
+    cert = x509.load_pem_x509_certificate(Path(cert_path).read_bytes())
+    return cert.serial_number, cert.not_valid_after_utc
+
+
+def record_loaded_cert() -> None:
+    """Remember the cert identity currently loaded by the SMTP server."""
+    global _loaded_identity
+    _loaded_identity = read_cert_identity(_active_cert_path())
+
+
+def custom_cert_changed() -> bool:
+    """True when a custom cert on disk differs from the one SMTP loaded."""
+    if not _custom_cert_configured():
+        return False
+    try:
+        current = read_cert_identity(config.SMTP_CERT_FILE)
+    except Exception as exc:
+        logger.warning("Could not read custom TLS certificate: %s", exc)
+        return False
+    if _loaded_identity is None:
+        record_loaded_cert()
+        return False
+    return current != _loaded_identity
 
 
 def ensure_certificate() -> None:
