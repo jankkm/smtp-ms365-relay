@@ -2,6 +2,29 @@
 {% block title %}Dashboard – SMTP Relay{% endblock %}
 
 {% block content %}
+{% if access_denied %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body px-4 py-5">
+        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-4"
+             style="width: 5rem; height: 5rem;">
+          <i class="bi bi-shield-lock text-secondary" style="font-size: 2.25rem;"></i>
+        </div>
+        <h4 class="fw-semibold mb-2">Access restricted</h4>
+        <p class="text-muted mb-0 mx-auto" style="max-width: 28rem;">
+          You do not have permission to access the dashboard.
+          If you believe this is a mistake, please contact an administrator.
+        </p>
+        <hr class="my-4">
+        <p class="text-muted small mb-0">
+          Signed in as <strong>{{ session.user_name or session.user_email }}</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
 <h4 class="mb-4 fw-semibold"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
 
 <div class="row g-3 mb-4">
@@ -97,4 +120,5 @@
   <div class="card-body text-muted">No emails received yet.</div>
   {% endif %}
 </div>
+{% endif %}
 {% endblock %}

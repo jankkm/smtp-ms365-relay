@@ -40,6 +40,7 @@
             <i class="bi bi-speedometer2 me-1"></i>Dashboard
           </a>
         </li>
+        {% if session.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.blueprint == 'credentials' %}active{% endif %}"
              href="{{ url_for('credentials.index') }}">
@@ -52,7 +53,6 @@
             <i class="bi bi-envelope me-1"></i>Emails
           </a>
         </li>
-        {% if session.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.blueprint == 'users' %}active{% endif %}"
              href="{{ url_for('users.index') }}">

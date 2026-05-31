@@ -125,6 +125,9 @@ def create_app() -> Flask:
     @flask_app.route("/")
     @login_required
     def dashboard():
+        if not session.get("is_admin"):
+            return render_template("dashboard.html", access_denied=True)
+
         db = get_request_db()
 
         today = datetime.utcnow().date()
@@ -176,6 +179,7 @@ def create_app() -> Flask:
 
         return render_template(
             "dashboard.html",
+            access_denied=False,
             emails_today_sent=emails_today_sent,
             emails_today_failed=emails_today_failed,
             emails_week=emails_week,

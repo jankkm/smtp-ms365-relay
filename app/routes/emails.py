@@ -1,6 +1,6 @@
 from flask import Blueprint, Response, abort, render_template, request
 
-from app.auth import login_required
+from app.auth import admin_required
 from app.database import get_request_db
 from app.models import EmailLog, SmtpCredential
 
@@ -10,7 +10,7 @@ PER_PAGE = 25
 
 
 @bp.route("/emails")
-@login_required
+@admin_required
 def index():
     db = get_request_db()
 
@@ -43,7 +43,7 @@ def index():
 
 
 @bp.route("/emails/<int:email_id>/download")
-@login_required
+@admin_required
 def download(email_id: int):
     db = get_request_db()
     entry = db.get(EmailLog, email_id)
