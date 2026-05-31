@@ -27,6 +27,7 @@ class SmtpCredential(Base):
     description = Column(String, default="")
     allowed_senders = Column(Text, default="[]")    # JSON list of patterns
     allowed_recipients = Column(Text, default="[]") # JSON list of patterns
+    legacy_data = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     total_sent = Column(Integer, default=0, nullable=False)

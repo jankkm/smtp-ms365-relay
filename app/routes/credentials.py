@@ -22,6 +22,10 @@ def _parse_patterns(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
+def _form_checkbox(name: str) -> bool:
+    return request.form.get(name) == "1"
+
+
 def _generate_password() -> str:
     return secrets.token_urlsafe(24)
 
@@ -61,6 +65,7 @@ def create():
         description=description,
         allowed_senders=json.dumps(senders),
         allowed_recipients=json.dumps(recipients),
+        legacy_data=_form_checkbox("legacy_data"),
     )
     db.add(cred)
     db.commit()
@@ -82,6 +87,7 @@ def edit(cred_id: int):
     cred.description = request.form.get("description", "").strip()
     cred.allowed_senders = json.dumps(_parse_patterns(request.form.get("allowed_senders", "")))
     cred.allowed_recipients = json.dumps(_parse_patterns(request.form.get("allowed_recipients", "")))
+    cred.legacy_data = _form_checkbox("legacy_data")
     db.commit()
     flash(f"Credential '{cred.username}' updated.", "success")
     return redirect(url_for("credentials.index"))

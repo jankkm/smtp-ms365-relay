@@ -65,6 +65,7 @@ class RelayAuthenticator:
                 "credential_id": cred.id,
                 "allowed_senders": cred.get_allowed_senders(),
                 "allowed_recipients": cred.get_allowed_recipients(),
+                "legacy_data": cred.legacy_data,
             }
 
         logger.info("SMTP auth accepted: '%s'", username)

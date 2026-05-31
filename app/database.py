@@ -46,6 +46,7 @@ def _migrate() -> None:
     migrations = [
         ("smtp_credentials", "total_sent",   "INTEGER NOT NULL DEFAULT 0"),
         ("smtp_credentials", "last_used_at", "DATETIME"),
+        ("smtp_credentials", "legacy_data",  "BOOLEAN NOT NULL DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
