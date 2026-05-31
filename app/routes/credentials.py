@@ -88,6 +88,7 @@ def edit(cred_id: int):
     cred.allowed_senders = json.dumps(_parse_patterns(request.form.get("allowed_senders", "")))
     cred.allowed_recipients = json.dumps(_parse_patterns(request.form.get("allowed_recipients", "")))
     cred.legacy_data = _form_checkbox("legacy_data")
+    cred.store_only = _form_checkbox("store_only")
     db.commit()
     flash(f"Credential '{cred.username}' updated.", "success")
     return redirect(url_for("credentials.index"))
@@ -187,6 +188,13 @@ def test_email(cred_id: int):
         cred.last_used_at = log_entry.received_at
         db.commit()
         flash(f"Blocked: {block_reason}", "danger")
+        return redirect(url_for("credentials.index"))
+
+    if not cred.forwards_mail():
+        log_entry.status = "stored"
+        cred.last_used_at = log_entry.received_at
+        db.commit()
+        flash(f"Test email stored (credential is in store-only mode).", "info")
         return redirect(url_for("credentials.index"))
 
     try:

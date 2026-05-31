@@ -29,6 +29,7 @@ class SmtpCredential(Base):
     allowed_recipients = Column(Text, default="[]") # JSON list of patterns
     legacy_data = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    store_only = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     total_sent = Column(Integer, default=0, nullable=False)
     last_used_at = Column(DateTime, nullable=True)
@@ -38,6 +39,9 @@ class SmtpCredential(Base):
 
     def get_allowed_recipients(self) -> list[str]:
         return json.loads(self.allowed_recipients or "[]")
+
+    def forwards_mail(self) -> bool:
+        return self.is_active and not self.store_only
 
 
 class EmailLog(Base):
@@ -50,7 +54,7 @@ class EmailLog(Base):
     to_addrs = Column(Text)   # JSON list
     subject = Column(String)
     raw_eml = Column(LargeBinary)
-    status = Column(String)   # "sent", "failed", "pending"
+    status = Column(String)   # "sent", "failed", "pending", "stored"
     error_message = Column(Text)
     received_at = Column(DateTime, default=datetime.utcnow)
 

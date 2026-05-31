@@ -47,6 +47,8 @@ def _migrate() -> None:
         ("smtp_credentials", "total_sent",   "INTEGER NOT NULL DEFAULT 0"),
         ("smtp_credentials", "last_used_at", "DATETIME"),
         ("smtp_credentials", "legacy_data",  "BOOLEAN NOT NULL DEFAULT 0"),
+        ("smtp_credentials", "mode",         "TEXT NOT NULL DEFAULT 'active'"),
+        ("smtp_credentials", "store_only",   "BOOLEAN NOT NULL DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -54,6 +56,14 @@ def _migrate() -> None:
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                 logger.info("Migration: added column %s.%s", table, column)
+        existing_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(smtp_credentials)"))]
+        if "mode" in existing_cols and "store_only" in existing_cols:
+            conn.execute(text(
+                "UPDATE smtp_credentials SET store_only = 1 WHERE mode = 'store_only'"
+            ))
+            conn.execute(text(
+                "UPDATE smtp_credentials SET is_active = 0 WHERE mode = 'inactive'"
+            ))
         conn.execute(text("DELETE FROM app_settings WHERE key = 'max_message_size_mb'"))
         conn.commit()
 

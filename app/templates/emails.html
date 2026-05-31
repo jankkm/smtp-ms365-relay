@@ -24,6 +24,7 @@
         <select name="status" class="form-select form-select-sm">
           <option value="">All</option>
           <option value="sent"    {% if status_filter == 'sent'    %}selected{% endif %}>Sent</option>
+          <option value="stored"  {% if status_filter == 'stored'  %}selected{% endif %}>Stored</option>
           <option value="failed"  {% if status_filter == 'failed'  %}selected{% endif %}>Failed</option>
           <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
         </select>
@@ -70,11 +71,24 @@
                data-bs-toggle="tooltip"></i>
             {% endif %}
           </td>
-          <td>
+          <td class="text-nowrap text-end">
+            <div class="table-actions">
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    title="Send again"
+                    data-bs-toggle="modal"
+                    data-bs-target="#resendModal"
+                    data-email-id="{{ email.id }}"
+                    data-from="{{ email.from_addr }}"
+                    data-to="{{ email.get_to_addrs()|join(', ') }}"
+                    data-subject="{{ email.subject or '(no subject)' }}">
+              <i class="bi bi-send"></i>
+            </button>
             <a href="{{ url_for('emails.download', email_id=email.id) }}"
                class="btn btn-sm btn-outline-secondary" title="Download EML">
               <i class="bi bi-download"></i>
             </a>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -116,7 +130,49 @@
 <div class="text-muted">No emails match the current filter.</div>
 {% endif %}
 
+{# ── Resend Confirmation Modal ─────────────────────────────────────────── #}
+{% if emails %}
+<div class="modal fade" id="resendModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="resendForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Send email again?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">This will send the message again via Microsoft 365.</p>
+          <dl class="mb-0 small">
+            <dt class="text-muted">From</dt>
+            <dd class="monospace" id="resendFrom"></dd>
+            <dt class="text-muted">To</dt>
+            <dd class="monospace" id="resendTo"></dd>
+            <dt class="text-muted">Subject</dt>
+            <dd id="resendSubject"></dd>
+          </dl>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script>
+const resendModal = document.getElementById('resendModal');
+if (resendModal) {
+  resendModal.addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('resendForm').action = `/emails/${btn.dataset.emailId}/resend`;
+    document.getElementById('resendFrom').textContent = btn.dataset.from;
+    document.getElementById('resendTo').textContent = btn.dataset.to;
+    document.getElementById('resendSubject').textContent = btn.dataset.subject;
+  });
+}
+
 // Bootstrap tooltips for error messages
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
   new bootstrap.Tooltip(el);

@@ -66,6 +66,7 @@ class RelayAuthenticator:
                 "allowed_senders": cred.get_allowed_senders(),
                 "allowed_recipients": cred.get_allowed_recipients(),
                 "legacy_data": cred.legacy_data,
+                "forwards_mail": cred.forwards_mail(),
             }
 
         logger.info("SMTP auth accepted: '%s'", username)
@@ -133,11 +134,20 @@ class RelayHandler:
                 to_addrs=json.dumps(to_addrs),
                 subject=subject,
                 raw_eml=raw_eml,
-                status="pending",
+                status="pending" if auth["forwards_mail"] else "stored",
             )
             db.add(entry)
             db.commit()
             log_id = entry.id
+
+        if not auth["forwards_mail"]:
+            with get_db() as db:
+                cred = db.get(SmtpCredential, auth["credential_id"])
+                if cred:
+                    cred.last_used_at = datetime.utcnow()
+                db.commit()
+            logger.info("Email %d stored (not forwarded): %s -> %s", log_id, from_addr, to_addrs)
+            return "250 2.0.0 OK"
 
         try:
             graph.send_mail(from_addr, to_addrs, raw_eml)

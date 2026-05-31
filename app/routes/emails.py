@@ -1,8 +1,11 @@
-from flask import Blueprint, Response, abort, render_template, request
+from datetime import datetime
+
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
 from app.auth import admin_required
 from app.database import get_request_db
 from app.models import EmailLog, SmtpCredential
+import app.graph as graph
 
 bp = Blueprint("emails", __name__)
 
@@ -54,3 +57,36 @@ def download(email_id: int):
         mimetype="message/rfc822",
         headers={"Content-Disposition": f'attachment; filename="email_{email_id}.eml"'},
     )
+
+
+@bp.route("/emails/<int:email_id>/resend", methods=["POST"])
+@admin_required
+def resend(email_id: int):
+    db = get_request_db()
+    entry = db.get(EmailLog, email_id)
+    if entry is None:
+        abort(404)
+
+    if not entry.raw_eml:
+        flash("Cannot resend: raw message is missing.", "danger")
+        return redirect(request.referrer or url_for("emails.index"))
+
+    to_addrs = entry.get_to_addrs()
+    try:
+        graph.send_mail(entry.from_addr, to_addrs, entry.raw_eml)
+        entry.status = "sent"
+        entry.error_message = None
+        if entry.credential_id:
+            cred = db.get(SmtpCredential, entry.credential_id)
+            if cred:
+                cred.last_used_at = datetime.utcnow()
+                cred.total_sent = (cred.total_sent or 0) + 1
+        db.commit()
+        flash(f"Email resent to {', '.join(to_addrs)}.", "success")
+    except Exception as exc:
+        entry.status = "failed"
+        entry.error_message = str(exc)
+        db.commit()
+        flash(f"Resend failed: {exc}", "danger")
+
+    return redirect(request.referrer or url_for("emails.index"))
