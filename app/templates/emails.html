@@ -88,6 +88,15 @@
                class="btn btn-sm btn-outline-secondary" title="Download EML">
               <i class="bi bi-download"></i>
             </a>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    title="Delete"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-email-id="{{ email.id }}"
+                    data-subject="{{ email.subject or '(no subject)' }}">
+              <i class="bi bi-trash"></i>
+            </button>
             </div>
           </td>
         </tr>
@@ -159,6 +168,26 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="post" id="deleteForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete email?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          Delete <strong id="deleteSubject"></strong>? This cannot be undone.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <script>
@@ -170,6 +199,15 @@ if (resendModal) {
     document.getElementById('resendFrom').textContent = btn.dataset.from;
     document.getElementById('resendTo').textContent = btn.dataset.to;
     document.getElementById('resendSubject').textContent = btn.dataset.subject;
+  });
+}
+
+const deleteModal = document.getElementById('deleteModal');
+if (deleteModal) {
+  deleteModal.addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteForm').action = `/emails/${btn.dataset.emailId}/delete`;
+    document.getElementById('deleteSubject').textContent = btn.dataset.subject;
   });
 }
 

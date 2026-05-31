@@ -90,3 +90,18 @@ def resend(email_id: int):
         flash(f"Resend failed: {exc}", "danger")
 
     return redirect(request.referrer or url_for("emails.index"))
+
+
+@bp.route("/emails/<int:email_id>/delete", methods=["POST"])
+@admin_required
+def delete(email_id: int):
+    db = get_request_db()
+    entry = db.get(EmailLog, email_id)
+    if entry is None:
+        abort(404)
+
+    subject = entry.subject or "(no subject)"
+    db.delete(entry)
+    db.commit()
+    flash(f"Deleted email: {subject}", "success")
+    return redirect(request.referrer or url_for("emails.index"))
