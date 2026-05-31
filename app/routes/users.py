@@ -33,3 +33,29 @@ def toggle_admin(user_id: int):
     state = "granted admin" if user.is_admin else "revoked admin"
     flash(f"{user.display_name or user.email}: {state}.", "success")
     return redirect(url_for("users.index"))
+
+
+@bp.route("/users/<int:user_id>/delete", methods=["POST"])
+@admin_required
+def delete(user_id: int):
+    db = get_request_db()
+    user = db.get(User, user_id)
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("users.index"))
+
+    if user.id == session["user_id"]:
+        flash("You cannot delete your own account.", "warning")
+        return redirect(url_for("users.index"))
+
+    if user.is_admin:
+        admin_count = db.query(User).filter(User.is_admin.is_(True)).count()
+        if admin_count <= 1:
+            flash("Cannot delete the last admin.", "warning")
+            return redirect(url_for("users.index"))
+
+    name = user.display_name or user.email
+    db.delete(user)
+    db.commit()
+    flash(f"User '{name}' deleted.", "success")
+    return redirect(url_for("users.index"))

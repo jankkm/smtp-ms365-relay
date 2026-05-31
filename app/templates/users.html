@@ -33,13 +33,22 @@
             {% endif %}
           </td>
           <td class="text-muted small text-nowrap">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-          <td class="text-end">
+          <td class="text-end text-nowrap">
             {% if user.id != session.user_id %}
             <form method="post" action="{{ url_for('users.toggle_admin', user_id=user.id) }}" class="d-inline">
               <button class="btn btn-sm {{ 'btn-outline-secondary' if user.is_admin else 'btn-outline-primary' }}">
                 {{ 'Revoke admin' if user.is_admin else 'Grant admin' }}
               </button>
             </form>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger ms-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-user-id="{{ user.id }}"
+                    data-user-name="{{ user.display_name or user.email }}"
+                    title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
             {% else %}
             <span class="text-muted small">(you)</span>
             {% endif %}
@@ -50,4 +59,32 @@
     </table>
   </div>
 </div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="post" id="deleteForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete user?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          Delete <strong id="deleteUserName"></strong>? They will need to sign in again to be re-registered.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('deleteForm').action = `/users/${btn.dataset.userId}/delete`;
+  document.getElementById('deleteUserName').textContent = btn.dataset.userName;
+});
+</script>
 {% endblock %}
