@@ -15,6 +15,7 @@ SessionLocal: sessionmaker | None = None
 
 SETTING_DEFAULTS = {
     "retention_days": "30",
+    "notes": "",
 }
 
 

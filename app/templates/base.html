@@ -81,6 +81,12 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.blueprint == 'notes' %}active{% endif %}"
+             href="{{ url_for('notes.index') }}">
+            <i class="bi bi-journal-text me-1"></i>Notes
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.blueprint == 'settings' %}active{% endif %}"
              href="{{ url_for('settings.index') }}">
             <i class="bi bi-gear me-1"></i>Settings

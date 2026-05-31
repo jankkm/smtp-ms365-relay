@@ -27,6 +27,7 @@ from app.database import close_request_db, db_healthy, get_db, get_request_db, i
 from app.models import AppSetting, EmailLog, SmtpCredential
 from app.routes.credentials import bp as credentials_bp
 from app.routes.emails import bp as emails_bp
+from app.routes.notes import bp as notes_bp
 from app.routes.settings import bp as settings_bp
 from app.routes.users import bp as users_bp
 
@@ -113,6 +114,7 @@ def create_app() -> Flask:
     flask_app.register_blueprint(credentials_bp)
     flask_app.register_blueprint(emails_bp)
     flask_app.register_blueprint(users_bp)
+    flask_app.register_blueprint(notes_bp)
     flask_app.register_blueprint(settings_bp)
 
     flask_app.teardown_appcontext(close_request_db)

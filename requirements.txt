@@ -10,3 +10,4 @@ bcrypt
 APScheduler
 gunicorn
 python-dotenv
+markdown
