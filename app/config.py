@@ -15,6 +15,8 @@ ENTRA_CLIENT_SECRET: str = _env("ENTRA_CLIENT_SECRET", "")
 
 SECRET_KEY: str = _env("SECRET_KEY", "change-me-in-production")
 
+LOG_LEVEL: str = (_env("LOG_LEVEL", "INFO") or "INFO").upper()
+
 DATA_DIR: Path = Path(_env("DATA_DIR", "/app/data"))
 CERTS_DIR: Path = DATA_DIR / "certs"
 DB_PATH: Path = DATA_DIR / "smtp_relay.db"

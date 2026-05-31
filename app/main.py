@@ -30,12 +30,18 @@ from app.routes.emails import bp as emails_bp
 from app.routes.settings import bp as settings_bp
 from app.routes.users import bp as users_bp
 
+_log_level = getattr(logging, config.LOG_LEVEL, None)
+if not isinstance(_log_level, int):
+    _log_level = logging.INFO
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format="%(asctime)s %(levelname)s %(name)s  %(message)s",
     stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
+if config.LOG_LEVEL not in logging.getLevelNamesMapping():
+    logger.warning("Invalid LOG_LEVEL %r, using INFO", config.LOG_LEVEL)
 
 
 # ---------------------------------------------------------------------------
