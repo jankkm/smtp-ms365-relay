@@ -66,6 +66,7 @@ def create():
         allowed_senders=json.dumps(senders),
         allowed_recipients=json.dumps(recipients),
         legacy_data=_form_checkbox("legacy_data"),
+        store_only=_form_checkbox("store_only"),
     )
     db.add(cred)
     db.commit()
