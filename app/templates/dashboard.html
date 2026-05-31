@@ -66,16 +66,20 @@
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-white fw-semibold">Credential activity this week</div>
   <div class="table-responsive">
-    <table class="table table-sm mb-0">
+    <table class="table table-sm mb-0 table-sortable" data-sort-col="1" data-sort-dir="desc">
       <thead class="table-light">
-        <tr><th>Credential</th><th class="text-end">Total</th><th class="text-end">Sent</th></tr>
+        <tr>
+          <th data-sort="string">Credential</th>
+          <th data-sort="number" class="text-end">Total</th>
+          <th data-sort="number" class="text-end">Sent</th>
+        </tr>
       </thead>
       <tbody>
         {% for row in cred_stats %}
         <tr>
           <td class="monospace">{{ row.username }}</td>
-          <td class="text-end">{{ row.total }}</td>
-          <td class="text-end">{{ row.sent or 0 }}</td>
+          <td class="text-end" data-sort-value="{{ row.total }}">{{ row.total }}</td>
+          <td class="text-end" data-sort-value="{{ row.sent or 0 }}">{{ row.sent or 0 }}</td>
         </tr>
         {% endfor %}
       </tbody>

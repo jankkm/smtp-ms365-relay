@@ -34,7 +34,7 @@ def _generate_password() -> str:
 @admin_required
 def index():
     db = get_request_db()
-    credentials = db.query(SmtpCredential).order_by(SmtpCredential.created_at.desc()).all()
+    credentials = db.query(SmtpCredential).order_by(SmtpCredential.username).all()
     new_cred = session.pop("new_credential", None)
     return render_template("credentials.html", credentials=credentials, new_cred=new_cred)
 

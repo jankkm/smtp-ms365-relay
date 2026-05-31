@@ -19,6 +19,15 @@
       border-radius: .375rem;
       padding: 1rem 1.25rem;
     }
+    th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    th.sortable:hover { background-color: #e9ecef; }
+    th.sortable .sort-icon {
+      margin-left: .25rem;
+      font-size: .75rem;
+      opacity: .35;
+    }
+    th.sortable.sort-asc .sort-icon,
+    th.sortable.sort-desc .sort-icon { opacity: 1; }
   </style>
 </head>
 <body>
@@ -103,5 +112,78 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  function cellSortValue(cell, type) {
+    const v = cell.getAttribute('data-sort-value');
+    if (v !== null) return v;
+    return cell.textContent.trim();
+  }
+
+  function compareValues(a, b, type) {
+    if (type === 'number') {
+      return (parseFloat(a) || 0) - (parseFloat(b) || 0);
+    }
+    return String(a).localeCompare(String(b), undefined, { sensitivity: 'base', numeric: true });
+  }
+
+  function updateHeaderState(headers, activeCol, dir) {
+    headers.forEach((th, i) => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      const icon = th.querySelector('.sort-icon');
+      if (!th.dataset.sort) {
+        if (icon) icon.className = 'sort-icon bi bi-arrow-down-up';
+        return;
+      }
+      if (i === activeCol) {
+        th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+        if (icon) icon.className = 'sort-icon bi ' + (dir === 'asc' ? 'bi-sort-up' : 'bi-sort-down');
+      } else if (icon) {
+        icon.className = 'sort-icon bi bi-arrow-down-up';
+      }
+    });
+  }
+
+  function sortTable(table, colIndex, dir) {
+    const tbody = table.querySelector('tbody');
+    const headers = [...table.querySelectorAll('thead th')];
+    const type = headers[colIndex]?.dataset.sort || 'string';
+    const rows = [...tbody.querySelectorAll('tr')];
+    rows.sort((ra, rb) => {
+      const a = cellSortValue(ra.children[colIndex], type);
+      const b = cellSortValue(rb.children[colIndex], type);
+      const cmp = compareValues(a, b, type);
+      return dir === 'desc' ? -cmp : cmp;
+    });
+    rows.forEach(row => tbody.appendChild(row));
+    updateHeaderState(headers, colIndex, dir);
+  }
+
+  document.querySelectorAll('table.table-sortable').forEach(table => {
+    const headers = [...table.querySelectorAll('thead th')];
+    let col = parseInt(table.dataset.sortCol || '0', 10);
+    let dir = table.dataset.sortDir || 'asc';
+
+    headers.forEach((th, i) => {
+      if (!th.dataset.sort) return;
+      th.classList.add('sortable');
+      if (!th.querySelector('.sort-icon')) {
+        th.insertAdjacentHTML('beforeend', '<i class="sort-icon bi bi-arrow-down-up"></i>');
+      }
+      th.addEventListener('click', () => {
+        if (col === i) {
+          dir = dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          col = i;
+          dir = th.dataset.sort === 'number' ? 'desc' : 'asc';
+        }
+        sortTable(table, col, dir);
+      });
+    });
+
+    sortTable(table, col, dir);
+  });
+})();
+</script>
 </body>
 </html>

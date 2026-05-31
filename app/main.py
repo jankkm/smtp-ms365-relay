@@ -167,6 +167,7 @@ def create_app() -> Flask:
             .join(EmailLog, EmailLog.credential_id == SmtpCredential.id)
             .filter(EmailLog.received_at >= week_ago)
             .group_by(SmtpCredential.id)
+            .order_by(func.count(EmailLog.id).desc())
             .all()
         )
 
