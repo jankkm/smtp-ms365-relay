@@ -219,7 +219,8 @@ smtp-relay/
 │   ├── main.py           # Flask app + startup orchestration
 │   ├── config.py         # Environment variable parsing (_FILE support)
 │   ├── models.py         # SQLAlchemy models
-│   ├── database.py       # DB init, WAL mode, session helpers
+│   ├── database.py       # DB init, WAL mode, migrations, session helpers
+│   ├── email_storage.py  # Raw .eml files on disk (under DATA_DIR/emails)
 │   ├── auth.py           # OIDC login (authlib), first-user-admin logic
 │   ├── cert.py           # Self-signed TLS certificate management
 │   ├── graph.py          # MS Graph API client (MSAL + httpx)
@@ -234,7 +235,7 @@ smtp-relay/
 
 `docker-compose.yml` is created locally from the example and is gitignored.
 
-Runtime data (SQLite database and TLS certificates) is stored in the `smtp_relay_data` Docker volume.
+Runtime data (SQLite database, raw `.eml` files under `emails/`, and TLS certificates) is stored in the `data/` volume (default `/app/data`).
 
 ---
 

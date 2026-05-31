@@ -17,9 +17,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, jsonify, redirect, render_template, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import func
+from sqlalchemy.orm import load_only
 
 import app.cert as cert_module
 import app.config as config
+import app.email_storage as email_storage
 import app.smtp_server as smtp_server
 from app.auth import admin_required, init_oauth, login_required
 from app.auth import bp as auth_bp
@@ -54,7 +56,18 @@ def cleanup_old_emails() -> None:
         setting = db.query(AppSetting).filter_by(key="retention_days").first()
         retention_days = int(setting.value) if setting else 30
         cutoff = datetime.utcnow() - timedelta(days=retention_days)
-        deleted = db.query(EmailLog).filter(EmailLog.received_at < cutoff).delete()
+        stale = (
+            db.query(EmailLog.eml_path)
+            .filter(EmailLog.received_at < cutoff)
+            .all()
+        )
+        for (eml_path,) in stale:
+            email_storage.delete_eml(eml_path)
+        deleted = (
+            db.query(EmailLog)
+            .filter(EmailLog.received_at < cutoff)
+            .delete(synchronize_session=False)
+        )
         db.commit()
     if deleted:
         logger.info("Email cleanup: removed %d entries older than %d days", deleted, retention_days)
@@ -175,6 +188,16 @@ def create_app() -> Flask:
 
         recent_emails = (
             db.query(EmailLog)
+            .options(
+                load_only(
+                    EmailLog.id,
+                    EmailLog.from_addr,
+                    EmailLog.to_addrs,
+                    EmailLog.subject,
+                    EmailLog.status,
+                    EmailLog.received_at,
+                )
+            )
             .order_by(EmailLog.received_at.desc())
             .limit(10)
             .all()

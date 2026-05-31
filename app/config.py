@@ -19,6 +19,7 @@ LOG_LEVEL: str = (_env("LOG_LEVEL", "INFO") or "INFO").upper()
 
 DATA_DIR: Path = Path(_env("DATA_DIR", "/app/data"))
 CERTS_DIR: Path = DATA_DIR / "certs"
+EMAILS_DIR: Path = DATA_DIR / "emails"
 DB_PATH: Path = DATA_DIR / "smtp_relay.db"
 
 SMTP_HOSTNAME: str = _env("SMTP_HOSTNAME", "localhost")

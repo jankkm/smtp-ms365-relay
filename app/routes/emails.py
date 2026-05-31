@@ -2,10 +2,25 @@ from datetime import datetime
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
+from sqlalchemy.orm import load_only
+
 from app.auth import admin_required
+import app.email_storage as email_storage
+import app.graph as graph
 from app.database import get_request_db
 from app.models import EmailLog, SmtpCredential
-import app.graph as graph
+
+EMAIL_LIST_COLUMNS = (
+    EmailLog.id,
+    EmailLog.credential_id,
+    EmailLog.credential_username,
+    EmailLog.from_addr,
+    EmailLog.to_addrs,
+    EmailLog.subject,
+    EmailLog.status,
+    EmailLog.error_message,
+    EmailLog.received_at,
+)
 
 bp = Blueprint("emails", __name__)
 
@@ -28,7 +43,12 @@ def index():
         query = query.filter(EmailLog.status == status_filter)
 
     total = query.count()
-    emails = query.offset((page - 1) * PER_PAGE).limit(PER_PAGE).all()
+    emails = (
+        query.options(load_only(*EMAIL_LIST_COLUMNS))
+        .offset((page - 1) * PER_PAGE)
+        .limit(PER_PAGE)
+        .all()
+    )
     total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
 
     credentials = db.query(SmtpCredential).order_by(SmtpCredential.username).all()
@@ -52,8 +72,11 @@ def download(email_id: int):
     entry = db.get(EmailLog, email_id)
     if entry is None:
         abort(404)
+    raw_eml = entry.read_raw_eml()
+    if raw_eml is None:
+        abort(404)
     return Response(
-        entry.raw_eml,
+        raw_eml,
         mimetype="message/rfc822",
         headers={"Content-Disposition": f'attachment; filename="email_{email_id}.eml"'},
     )
@@ -67,7 +90,8 @@ def resend(email_id: int):
     if entry is None:
         abort(404)
 
-    if not entry.raw_eml:
+    raw_eml = entry.read_raw_eml()
+    if raw_eml is None:
         flash("Cannot resend: raw message is missing.", "danger")
         return redirect(request.referrer or url_for("emails.index"))
 
@@ -81,7 +105,7 @@ def resend(email_id: int):
         graph.send_mail(
             entry.from_addr,
             to_addrs,
-            entry.raw_eml,
+            raw_eml,
             save_to_sent_items=save_to_sent_items,
         )
         entry.status = "sent"
@@ -111,6 +135,7 @@ def delete(email_id: int):
         abort(404)
 
     subject = entry.subject or "(no subject)"
+    email_storage.delete_eml(entry.eml_path)
     db.delete(entry)
     db.commit()
     flash(f"Deleted email: {subject}", "success")

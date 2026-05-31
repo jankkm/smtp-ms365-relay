@@ -7,6 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from app.auth import admin_required
 from app.database import get_db, get_request_db
+import app.email_storage as email_storage
 from app.models import EmailLog, SmtpCredential
 import app.graph as graph
 
@@ -173,10 +174,11 @@ def test_email(cred_id: int):
         from_addr=from_address,
         to_addrs=json.dumps([to_address]),
         subject="SMTP Relay - Test Email",
-        raw_eml=raw_eml,
         status="failed",  # set to real status below
     )
     db.add(log_entry)
+    db.flush()
+    log_entry.eml_path = email_storage.write_eml(log_entry.id, raw_eml)
     db.commit()
 
     # Validate allow-lists and log the reason if blocked

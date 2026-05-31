@@ -1,8 +1,10 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base
+
+from app import email_storage
 
 Base = declarative_base()
 
@@ -54,13 +56,19 @@ class EmailLog(Base):
     from_addr = Column(String)
     to_addrs = Column(Text)   # JSON list
     subject = Column(String)
-    raw_eml = Column(LargeBinary)
+    eml_path = Column(String)  # relative path under DATA_DIR/emails, e.g. "42.eml"
     status = Column(String)   # "sent", "failed", "pending", "stored"
     error_message = Column(Text)
     received_at = Column(DateTime, default=datetime.utcnow)
 
     def get_to_addrs(self) -> list[str]:
         return json.loads(self.to_addrs or "[]")
+
+    def read_raw_eml(self) -> bytes | None:
+        return email_storage.read_eml(self.eml_path)
+
+    def has_raw_eml(self) -> bool:
+        return self.read_raw_eml() is not None
 
 
 class AppSetting(Base):

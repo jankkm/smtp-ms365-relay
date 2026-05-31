@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.config as config
+import app.email_storage as email_storage
 from app.models import AppSetting, Base
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def init_db() -> None:
 
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     config.CERTS_DIR.mkdir(parents=True, exist_ok=True)
+    email_storage.ensure_emails_dir()
 
     engine = create_engine(
         f"sqlite:///{config.DB_PATH}",
@@ -67,7 +69,58 @@ def _migrate() -> None:
                 "UPDATE smtp_credentials SET is_active = 0 WHERE mode = 'inactive'"
             ))
         conn.execute(text("DELETE FROM app_settings WHERE key = 'max_message_size_mb'"))
+        _migrate_email_storage(conn)
         conn.commit()
+
+
+def _migrate_email_storage(conn) -> None:
+    """Move legacy raw_eml blobs to disk and drop the BLOB column when possible."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        )
+    }
+    if "email_logs" not in tables:
+        return
+
+    cols = [row[1] for row in conn.execute(text("PRAGMA table_info(email_logs)"))]
+    if "eml_path" not in cols:
+        conn.execute(text("ALTER TABLE email_logs ADD COLUMN eml_path TEXT"))
+        logger.info("Migration: added column email_logs.eml_path")
+        cols.append("eml_path")
+
+    email_storage.ensure_emails_dir()
+
+    if "raw_eml" not in cols:
+        return
+
+    rows = conn.execute(
+        text("SELECT id, raw_eml FROM email_logs WHERE raw_eml IS NOT NULL")
+    ).fetchall()
+    migrated = 0
+    for row_id, blob in rows:
+        if not blob:
+            continue
+        rel = email_storage.write_eml(row_id, blob)
+        conn.execute(
+            text("UPDATE email_logs SET eml_path = :path WHERE id = :id"),
+            {"path": rel, "id": row_id},
+        )
+        migrated += 1
+    if migrated:
+        logger.info("Migration: moved %d email blob(s) from DB to disk", migrated)
+
+    conn.execute(text("UPDATE email_logs SET raw_eml = NULL WHERE raw_eml IS NOT NULL"))
+    try:
+        conn.execute(text("ALTER TABLE email_logs DROP COLUMN raw_eml"))
+        logger.info("Migration: dropped column email_logs.raw_eml")
+    except Exception as exc:
+        logger.warning(
+            "Migration: could not drop email_logs.raw_eml (%s); "
+            "column left empty in DB — upgrade SQLite or run VACUUM to reclaim space",
+            exc,
+        )
 
 
 def _seed_defaults() -> None:

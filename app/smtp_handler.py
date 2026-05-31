@@ -9,6 +9,7 @@ import bcrypt
 from aiosmtpd.smtp import AuthResult, LoginPassword
 
 import app.graph as graph
+import app.email_storage as email_storage
 from app.database import get_db
 from app.models import EmailLog, SmtpCredential
 
@@ -84,11 +85,12 @@ def _log_blocked(auth: dict, from_addr: str, to_addrs: list[str],
             from_addr=from_addr,
             to_addrs=json.dumps(to_addrs),
             subject=subject,
-            raw_eml=raw_eml,
             status="failed",
             error_message=reason,
         )
         db.add(entry)
+        db.flush()
+        entry.eml_path = email_storage.write_eml(entry.id, raw_eml)
         cred = db.get(SmtpCredential, auth["credential_id"])
         if cred:
             cred.last_used_at = datetime.utcnow()
@@ -134,10 +136,11 @@ class RelayHandler:
                 from_addr=from_addr,
                 to_addrs=json.dumps(to_addrs),
                 subject=subject,
-                raw_eml=raw_eml,
                 status="pending" if auth["forwards_mail"] else "stored",
             )
             db.add(entry)
+            db.flush()
+            entry.eml_path = email_storage.write_eml(entry.id, raw_eml)
             db.commit()
             log_id = entry.id
 
