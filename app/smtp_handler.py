@@ -67,6 +67,7 @@ class RelayAuthenticator:
                 "allowed_recipients": cred.get_allowed_recipients(),
                 "legacy_data": cred.legacy_data,
                 "forwards_mail": cred.forwards_mail(),
+                "save_to_sent_items": cred.save_to_sent_items,
             }
 
         logger.info("SMTP auth accepted: '%s'", username)
@@ -150,7 +151,12 @@ class RelayHandler:
             return "250 2.0.0 OK"
 
         try:
-            graph.send_mail(from_addr, to_addrs, raw_eml)
+            graph.send_mail(
+                from_addr,
+                to_addrs,
+                raw_eml,
+                save_to_sent_items=auth.get("save_to_sent_items", False),
+            )
             status, error = "sent", None
             logger.info("Email %d forwarded via Graph: %s -> %s", log_id, from_addr, to_addrs)
         except Exception as exc:

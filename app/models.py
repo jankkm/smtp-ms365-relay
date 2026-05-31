@@ -30,6 +30,7 @@ class SmtpCredential(Base):
     legacy_data = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     store_only = Column(Boolean, default=False, nullable=False)
+    save_to_sent_items = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     total_sent = Column(Integer, default=0, nullable=False)
     last_used_at = Column(DateTime, nullable=True)

@@ -7,14 +7,12 @@ from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import MISSING, SMTP
 
 import app.cert as cert_module
+import app.config as config
 from app.smtp_handler import RelayAuthenticator, RelayHandler
 
 logger = logging.getLogger(__name__)
 
 _controllers: list[Controller] = []
-
-# Raised on the StreamReader only while receiving a legacy client message body.
-_LEGACY_BODY_LIMIT = 4 << 20
 
 
 class RelaySMTP(SMTP):
@@ -41,8 +39,9 @@ class RelaySMTP(SMTP):
         await self.push("354 Start mail input; end with <CRLF>.<CRLF>")
 
         reader = self._reader
+        legacy_limit = config.MAX_MESSAGE_SIZE_BYTES
         old_limit = reader._limit
-        reader._limit = _LEGACY_BODY_LIMIT
+        reader._limit = legacy_limit
         try:
             lines, nbytes = [], 0
             while True:
@@ -88,6 +87,7 @@ def _start_controllers() -> None:
     handler = RelayHandler()
     authenticator = RelayAuthenticator()
     ssl_ctx = cert_module.create_ssl_context()
+    data_size_limit = config.MAX_MESSAGE_SIZE_BYTES
 
     # Port 465: SSL from the first byte (SMTPS)
     ctrl_465 = RelayController(
@@ -97,6 +97,7 @@ def _start_controllers() -> None:
         ssl_context=ssl_ctx,
         authenticator=authenticator,
         auth_required=True,
+        data_size_limit=data_size_limit,
     )
 
     # Port 587: plain connection, STARTTLS required before AUTH
@@ -109,6 +110,7 @@ def _start_controllers() -> None:
         authenticator=authenticator,
         auth_required=True,
         auth_require_tls=True,
+        data_size_limit=data_size_limit,
     )
 
     # Port 25: legacy plain SMTP, STARTTLS available but not required,
@@ -122,6 +124,7 @@ def _start_controllers() -> None:
         authenticator=authenticator,
         auth_required=True,
         auth_require_tls=False,
+        data_size_limit=data_size_limit,
     )
 
     ctrl_465.start()

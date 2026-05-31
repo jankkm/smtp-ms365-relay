@@ -72,8 +72,18 @@ def resend(email_id: int):
         return redirect(request.referrer or url_for("emails.index"))
 
     to_addrs = entry.get_to_addrs()
+    save_to_sent_items = False
+    if entry.credential_id:
+        cred = db.get(SmtpCredential, entry.credential_id)
+        if cred:
+            save_to_sent_items = cred.save_to_sent_items
     try:
-        graph.send_mail(entry.from_addr, to_addrs, entry.raw_eml)
+        graph.send_mail(
+            entry.from_addr,
+            to_addrs,
+            entry.raw_eml,
+            save_to_sent_items=save_to_sent_items,
+        )
         entry.status = "sent"
         entry.error_message = None
         if entry.credential_id:

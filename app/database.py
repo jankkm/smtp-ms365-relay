@@ -50,6 +50,7 @@ def _migrate() -> None:
         ("smtp_credentials", "legacy_data",  "BOOLEAN NOT NULL DEFAULT 0"),
         ("smtp_credentials", "mode",         "TEXT NOT NULL DEFAULT 'active'"),
         ("smtp_credentials", "store_only",   "BOOLEAN NOT NULL DEFAULT 0"),
+        ("smtp_credentials", "save_to_sent_items", "BOOLEAN NOT NULL DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:

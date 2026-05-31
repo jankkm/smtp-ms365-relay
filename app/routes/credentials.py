@@ -67,6 +67,7 @@ def create():
         allowed_recipients=json.dumps(recipients),
         legacy_data=_form_checkbox("legacy_data"),
         store_only=_form_checkbox("store_only"),
+        save_to_sent_items=_form_checkbox("save_to_sent_items"),
     )
     db.add(cred)
     db.commit()
@@ -90,6 +91,7 @@ def edit(cred_id: int):
     cred.allowed_recipients = json.dumps(_parse_patterns(request.form.get("allowed_recipients", "")))
     cred.legacy_data = _form_checkbox("legacy_data")
     cred.store_only = _form_checkbox("store_only")
+    cred.save_to_sent_items = _form_checkbox("save_to_sent_items")
     db.commit()
     flash(f"Credential '{cred.username}' updated.", "success")
     return redirect(url_for("credentials.index"))
@@ -199,7 +201,12 @@ def test_email(cred_id: int):
         return redirect(url_for("credentials.index"))
 
     try:
-        graph.send_mail(from_address, [to_address], raw_eml)
+        graph.send_mail(
+            from_address,
+            [to_address],
+            raw_eml,
+            save_to_sent_items=cred.save_to_sent_items,
+        )
         log_entry.status = "sent"
         cred.last_used_at = log_entry.received_at
         cred.total_sent = (cred.total_sent or 0) + 1
