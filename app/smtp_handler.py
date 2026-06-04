@@ -2,14 +2,13 @@ import fnmatch
 import json
 import logging
 from datetime import datetime
-from email import message_from_bytes
-from email.header import decode_header as _decode_header_raw
 
 import bcrypt
 from aiosmtpd.smtp import AuthResult, LoginPassword
 
 import app.graph as graph
 import app.email_storage as email_storage
+import app.mime_utils as mime_utils
 from app.database import get_db
 from app.models import EmailLog, SmtpCredential
 
@@ -20,20 +19,6 @@ def _matches_any(address: str, patterns: list[str]) -> bool:
     """Return True if address matches at least one fnmatch pattern (case-insensitive)."""
     lower = address.lower()
     return any(fnmatch.fnmatch(lower, p.lower()) for p in patterns)
-
-
-def _decode_subject(raw: str) -> str:
-    parts = _decode_header_raw(raw or "")
-    result = []
-    for fragment, charset in parts:
-        if isinstance(fragment, bytes):
-            try:
-                result.append(fragment.decode(charset or "utf-8", errors="replace"))
-            except (LookupError, TypeError):
-                result.append(fragment.decode("utf-8", errors="replace"))
-        else:
-            result.append(fragment)
-    return "".join(result)
 
 
 class RelayAuthenticator:
@@ -113,7 +98,7 @@ class RelayHandler:
             else envelope.content.encode()
         )
 
-        subject = _decode_subject(message_from_bytes(raw_eml).get("Subject", ""))
+        subject = mime_utils.extract_subject(raw_eml)
 
         if not _matches_any(from_addr, auth["allowed_senders"]):
             reason = f"Sender '{from_addr}' not in allowed senders list"

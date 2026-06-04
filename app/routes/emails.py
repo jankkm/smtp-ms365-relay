@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
@@ -7,6 +8,7 @@ from sqlalchemy.orm import load_only
 from app.auth import admin_required
 import app.email_storage as email_storage
 import app.graph as graph
+import app.mime_utils as mime_utils
 from app.database import get_request_db
 from app.models import EmailLog, SmtpCredential
 
@@ -25,6 +27,13 @@ EMAIL_LIST_COLUMNS = (
 bp = Blueprint("emails", __name__)
 
 PER_PAGE = 25
+ENCODED_WORD_RE = re.compile(r"=\?.+\?=", re.IGNORECASE)
+
+
+def _subject_needs_refresh(subject: str | None) -> bool:
+    if not subject:
+        return True
+    return "\ufffd" in subject or bool(ENCODED_WORD_RE.search(subject))
 
 
 @bp.route("/emails")
@@ -49,6 +58,20 @@ def index():
         .limit(PER_PAGE)
         .all()
     )
+    dirty_subjects = False
+    for entry in emails:
+        if not _subject_needs_refresh(entry.subject):
+            continue
+        raw_eml = entry.read_raw_eml()
+        if raw_eml is None:
+            continue
+        decoded = mime_utils.extract_subject(raw_eml)
+        if decoded != (entry.subject or ""):
+            entry.subject = decoded
+            dirty_subjects = True
+    if dirty_subjects:
+        db.commit()
+
     total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
 
     credentials = db.query(SmtpCredential).order_by(SmtpCredential.username).all()

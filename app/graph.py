@@ -1,6 +1,4 @@
 import base64
-import email as email_stdlib
-import email.header
 import logging
 import threading
 import time
@@ -10,6 +8,7 @@ import httpx
 import msal
 
 import app.config as config
+import app.mime_utils as mime_utils
 
 logger = logging.getLogger(__name__)
 
@@ -69,28 +68,14 @@ def _acquire_token() -> str:
     return result["access_token"]
 
 
-def _decode_header(value: str) -> str:
-    parts = email.header.decode_header(value or "")
-    decoded = []
-    for fragment, charset in parts:
-        if isinstance(fragment, bytes):
-            try:
-                decoded.append(fragment.decode(charset or "utf-8", errors="replace"))
-            except (LookupError, TypeError):
-                decoded.append(fragment.decode("utf-8", errors="replace"))
-        else:
-            decoded.append(fragment)
-    return "".join(decoded)
-
-
 def _user_url(from_address: str, path: str) -> str:
     return GRAPH_BASE.format(from_addr=from_address) + path
 
 
 def _parse_message(raw_eml: bytes) -> ParsedMessage:
     """Parse a raw MIME message into body fields and raw attachment bytes."""
-    msg = email_stdlib.message_from_bytes(raw_eml)
-    subject = _decode_header(msg.get("Subject", "(no subject)"))
+    msg = mime_utils.parse_message(raw_eml)
+    subject = mime_utils.decode_mime_header(str(msg.get("Subject", "(no subject)")))
 
     body_content = ""
     body_type = "Text"
@@ -104,20 +89,23 @@ def _parse_message(raw_eml: bytes) -> ParsedMessage:
             if part.get_filename() or "attachment" in disposition:
                 raw = part.get_payload(decode=True) or b""
                 attachments.append(AttachmentPart(
-                    name=_decode_header(part.get_filename() or "attachment"),
+                    name=mime_utils.decode_filename(part.get_filename()),
                     content_type=content_type,
                     data=raw,
                 ))
             elif content_type == "text/html" and not body_content:
-                raw = part.get_payload(decode=True) or b""
-                body_content = raw.decode("utf-8", errors="replace")
+                payload = part.get_content()
+                body_content = payload if isinstance(payload, str) else payload.decode("utf-8", errors="replace")
                 body_type = "HTML"
             elif content_type == "text/plain" and not body_content:
-                raw = part.get_payload(decode=True) or b""
-                body_content = raw.decode("utf-8", errors="replace")
+                payload = part.get_content()
+                body_content = payload if isinstance(payload, str) else payload.decode("utf-8", errors="replace")
     else:
-        raw = msg.get_payload(decode=True) or b""
-        body_content = raw.decode("utf-8", errors="replace")
+        payload = msg.get_content()
+        if isinstance(payload, str):
+            body_content = payload
+        else:
+            body_content = payload.decode("utf-8", errors="replace")
         body_type = "HTML" if msg.get_content_type() == "text/html" else "Text"
 
     return ParsedMessage(
