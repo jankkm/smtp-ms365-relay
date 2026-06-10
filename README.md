@@ -1,4 +1,6 @@
-# SMTP Relay
+# SMTP MS365 Relay
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 A self-hosted SMTP relay that accepts email on ports **25** (plain legacy SMTP), **465** (SMTPS), **587** (STARTTLS), and **2587** (legacy TLS for old clients) and forwards it to recipients via the **Microsoft Graph API**. The web UI (port 5000) lets admins manage SMTP credentials, view sent emails, and configure the relay.
 
@@ -317,3 +319,11 @@ fail2ban-client status smtp-relay
 - **TLS certificate:** By default a self-signed certificate is generated on start and renewed automatically when fewer than 90 days remain. Set `SMTP_CERT_FILE` and `SMTP_KEY_FILE` to use your own certificate instead — auto-generation and auto-renewal are then disabled, and the relay reloads SMTP when those files change on disk. Clients will warn about an untrusted certificate unless you use a cert they already trust.
 - **SQLite concurrency:** WAL mode is enabled for reliable concurrent access from the SMTP handler, web server, and background jobs.
 - **Single gunicorn worker:** Required because the SMTP server and APScheduler run in-process threads that must not be duplicated across workers.
+
+---
+
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+You are free to use, modify, and distribute this software under the terms of the AGPL-3.0. If you run a modified version as a network service, you must make the modified source code available to users of that service.
