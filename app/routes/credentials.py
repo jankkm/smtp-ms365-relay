@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import secrets
+import string
 
 import bcrypt
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -28,8 +29,41 @@ def _form_checkbox(name: str) -> bool:
     return request.form.get(name) == "1"
 
 
-def _generate_password() -> str:
-    return secrets.token_urlsafe(24)
+DEFAULT_PASSWORD_LENGTH = 32
+MIN_PASSWORD_LENGTH = 4
+MAX_PASSWORD_LENGTH = 72  # bcrypt input limit
+
+
+def _parse_password_length(raw: str | None) -> int | None:
+    try:
+        value = int((raw or "").strip())
+    except ValueError:
+        return None
+    if MIN_PASSWORD_LENGTH <= value <= MAX_PASSWORD_LENGTH:
+        return value
+    return None
+
+
+def _generate_password(length: int) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _credential_modal_data(cred: SmtpCredential) -> dict:
+    senders = cred.get_allowed_senders()
+    return {
+        "id": cred.id,
+        "username": cred.username,
+        "description": cred.description or "",
+        "senders": "\n".join(senders),
+        "recipients": "\n".join(cred.get_allowed_recipients()),
+        "legacyData": bool(cred.legacy_data),
+        "legacyTls": bool(cred.legacy_tls),
+        "passwordLength": cred.password_length or DEFAULT_PASSWORD_LENGTH,
+        "storeOnly": bool(cred.store_only),
+        "saveToSentItems": bool(cred.save_to_sent_items),
+        "firstSender": senders[0] if senders else "",
+    }
 
 
 @bp.route("/credentials")
@@ -38,11 +72,16 @@ def index():
     db = get_request_db()
     credentials = db.query(SmtpCredential).order_by(SmtpCredential.username).all()
     new_cred = session.pop("new_credential", None)
+    credentials_json = {str(c.id): _credential_modal_data(c) for c in credentials}
     return render_template(
         "credentials.html",
         credentials=credentials,
+        credentials_json=credentials_json,
         new_cred=new_cred,
         legacy_tls_port=config.LEGACY_TLS_PORT,
+        default_password_length=DEFAULT_PASSWORD_LENGTH,
+        min_password_length=MIN_PASSWORD_LENGTH,
+        max_password_length=MAX_PASSWORD_LENGTH,
     )
 
 
@@ -63,7 +102,17 @@ def create():
         flash(f"Username '{username}' is already taken.", "danger")
         return redirect(url_for("credentials.index"))
 
-    plain_password = _generate_password()
+    password_length = _parse_password_length(request.form.get("password_length"))
+    if password_length is None:
+        flash(
+            f"Password length must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH}.",
+            "danger",
+        )
+        return redirect(url_for("credentials.index"))
+
+    legacy_data = _form_checkbox("legacy_data")
+    legacy_tls = _form_checkbox("legacy_tls")
+    plain_password = _generate_password(password_length)
     hashed = bcrypt.hashpw(plain_password.encode(), bcrypt.gensalt()).decode()
 
     cred = SmtpCredential(
@@ -72,8 +121,9 @@ def create():
         description=description,
         allowed_senders=json.dumps(senders),
         allowed_recipients=json.dumps(recipients),
-        legacy_data=_form_checkbox("legacy_data"),
-        legacy_tls=_form_checkbox("legacy_tls"),
+        legacy_data=legacy_data,
+        legacy_tls=legacy_tls,
+        password_length=password_length,
         store_only=_form_checkbox("store_only"),
         save_to_sent_items=_form_checkbox("save_to_sent_items"),
     )
@@ -97,8 +147,17 @@ def edit(cred_id: int):
     cred.description = request.form.get("description", "").strip()
     cred.allowed_senders = json.dumps(_parse_patterns(request.form.get("allowed_senders", "")))
     cred.allowed_recipients = json.dumps(_parse_patterns(request.form.get("allowed_recipients", "")))
+    password_length = _parse_password_length(request.form.get("password_length"))
+    if password_length is None:
+        flash(
+            f"Password length must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH}.",
+            "danger",
+        )
+        return redirect(url_for("credentials.index"))
+
     cred.legacy_data = _form_checkbox("legacy_data")
     cred.legacy_tls = _form_checkbox("legacy_tls")
+    cred.password_length = password_length
     cred.store_only = _form_checkbox("store_only")
     cred.save_to_sent_items = _form_checkbox("save_to_sent_items")
     db.commit()
@@ -144,7 +203,7 @@ def reset_password(cred_id: int):
         flash("Credential not found.", "danger")
         return redirect(url_for("credentials.index"))
 
-    plain_password = _generate_password()
+    plain_password = _generate_password(cred.password_length)
     cred.hashed_password = bcrypt.hashpw(plain_password.encode(), bcrypt.gensalt()).decode()
     db.commit()
 
