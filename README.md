@@ -9,10 +9,18 @@ A self-hosted SMTP relay that accepts email on ports **25** (plain legacy SMTP),
 - SMTP relay on ports 25 (plain), 465 (SMTPS), 587 (STARTTLS), and 2587 (legacy TLS), AUTH PLAIN + LOGIN
 - Per-credential allow-lists for senders and recipients with wildcard support (`*@example.com`)
 - Credentials can be activated / deactivated without deletion
+- Per-credential **legacy TLS** flag: enables legacy cipher suites (TLS 1.0–1.2) on port 2587 for old clients that cannot negotiate modern TLS
+- Per-credential **legacy SMTP client** flag: relaxes the DATA phase to accept LF-only line endings and lines longer than the standard 1000-byte limit
+- Per-credential **store-only** mode: logs and stores emails without forwarding them via Graph (useful for testing or capture-only pipelines)
 - Emails forwarded via Microsoft Graph API (attachments up to **150 MB** each via upload sessions)
-- Email log with download as `.eml`, configurable retention (default: 30 days)
+- Email log with download as `.eml`, resend, and configurable retention (default: 30 days)
+- Send a **test email** from the web UI per credential to verify configuration and allow-lists
+- Password reset per credential — generates a new password on demand
 - Web UI login via Microsoft Entra (OIDC) — first user gets admin automatically
-- Self-signed TLS certificate generated on start, renewed automatically when < 90 days remain
+- User management: grant / revoke admin access and delete users from the web UI
+- Admin **notes page**: freeform Markdown notepad stored in the database
+- Configurable **timezone** for web UI timestamp display
+- Self-signed TLS certificate generated on start, renewed automatically when < 90 days remain; bring your own certificate via `SMTP_CERT_FILE` / `SMTP_KEY_FILE`
 - All settings in a single SQLite database; no other data store required
 - Docker Compose deployment, all configuration via environment variables
 
