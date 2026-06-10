@@ -108,7 +108,7 @@
       <tbody>
         {% for email in recent_emails %}
         <tr>
-          <td class="text-nowrap text-muted small">{{ email.received_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="text-nowrap text-muted small">{{ (email.received_at | localtime).strftime('%Y-%m-%d %H:%M') }}</td>
           <td class="monospace small">{{ email.from_addr }}</td>
           <td class="monospace small">{{ email.get_to_addrs()|join(', ') }}</td>
           <td>{{ email.subject or '(no subject)' }}</td>

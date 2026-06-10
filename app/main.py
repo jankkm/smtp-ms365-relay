@@ -11,10 +11,11 @@ Startup order:
 
 import logging
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask, jsonify, redirect, render_template, session, url_for
+from flask import Flask, g, jsonify, redirect, render_template, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
@@ -27,11 +28,20 @@ from app.auth import admin_required, init_oauth, login_required
 from app.auth import bp as auth_bp
 from app.database import close_request_db, db_healthy, get_db, get_request_db, init_db
 from app.models import AppSetting, EmailLog, SmtpCredential
+
+
 from app.routes.credentials import bp as credentials_bp
 from app.routes.emails import bp as emails_bp
 from app.routes.notes import bp as notes_bp
 from app.routes.settings import bp as settings_bp
 from app.routes.users import bp as users_bp
+
+
+def _resolve_tz(name: str) -> ZoneInfo:
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, Exception):
+        return ZoneInfo("UTC")
 
 _log_level = getattr(logging, config.LOG_LEVEL, None)
 if not isinstance(_log_level, int):
@@ -132,6 +142,25 @@ def create_app() -> Flask:
 
     flask_app.teardown_appcontext(close_request_db)
     init_oauth(flask_app)
+
+    @flask_app.before_request
+    def load_timezone():
+        tz_name = "UTC"
+        try:
+            db = get_request_db()
+            setting = db.query(AppSetting).filter_by(key="timezone").first()
+            if setting and setting.value:
+                tz_name = setting.value
+        except Exception:
+            pass
+        g.app_timezone = tz_name
+
+    @flask_app.template_filter("localtime")
+    def localtime_filter(dt):
+        if dt is None:
+            return dt
+        tz = _resolve_tz(getattr(g, "app_timezone", "UTC"))
+        return dt.replace(tzinfo=dt_timezone.utc).astimezone(tz)
 
     # ------------------------------------------------------------------
     # Dashboard

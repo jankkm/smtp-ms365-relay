@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.auth import admin_required
@@ -35,13 +37,21 @@ def index():
         except ValueError:
             errors.append("Retention days must be a positive integer.")
 
+        tz_raw = request.form.get("timezone", "").strip() or "UTC"
+        try:
+            ZoneInfo(tz_raw)
+        except (ZoneInfoNotFoundError, Exception):
+            errors.append(f"Unknown timezone: {tz_raw!r}. Use an IANA name like Europe/Berlin.")
+
         if errors:
             for msg in errors:
                 flash(msg, "danger")
         else:
             _set_setting(db, "retention_days", str(retention))
+            _set_setting(db, "timezone", tz_raw)
             db.commit()
             flash("Settings saved.", "success")
 
     settings = _get_all_settings(db)
-    return render_template("settings.html", settings=settings)
+    timezones = sorted(available_timezones())
+    return render_template("settings.html", settings=settings, timezones=timezones)

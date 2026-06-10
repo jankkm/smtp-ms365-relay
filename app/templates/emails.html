@@ -58,7 +58,7 @@
       <tbody>
         {% for email in emails %}
         <tr>
-          <td class="text-nowrap text-muted small">{{ email.received_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td class="text-nowrap text-muted small">{{ (email.received_at | localtime).strftime('%Y-%m-%d %H:%M:%S') }}</td>
           <td class="monospace small">{{ email.credential_username or '—' }}</td>
           <td class="monospace small">{{ email.from_addr }}</td>
           <td class="monospace small">{{ email.get_to_addrs()|join('<br>'|safe) }}</td>

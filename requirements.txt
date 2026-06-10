@@ -11,3 +11,4 @@ APScheduler
 gunicorn
 python-dotenv
 markdown
+tzdata
