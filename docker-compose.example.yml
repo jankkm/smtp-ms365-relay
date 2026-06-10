@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/jankkm/smtp-ms365-relay:latest
     ports:
       - "25:25"
       - "465:465"
