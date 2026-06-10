@@ -1,6 +1,5 @@
 Flask
 authlib
-requests
 SQLAlchemy
 aiosmtpd
 msal
@@ -9,6 +8,5 @@ cryptography
 bcrypt
 APScheduler
 gunicorn
-python-dotenv
 markdown
 tzdata
