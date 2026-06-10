@@ -85,8 +85,8 @@ def _start_controllers() -> None:
     global _controllers
 
     handler = RelayHandler()
-    authenticator = RelayAuthenticator()
     ssl_ctx = cert_module.create_ssl_context()
+    legacy_ssl_ctx = cert_module.create_legacy_ssl_context()
     data_size_limit = config.MAX_MESSAGE_SIZE_BYTES
 
     # Port 465: SSL from the first byte (SMTPS)
@@ -95,7 +95,7 @@ def _start_controllers() -> None:
         hostname="0.0.0.0",
         port=465,
         ssl_context=ssl_ctx,
-        authenticator=authenticator,
+        authenticator=RelayAuthenticator(),
         auth_required=True,
         data_size_limit=data_size_limit,
     )
@@ -107,21 +107,33 @@ def _start_controllers() -> None:
         port=587,
         tls_context=ssl_ctx,
         require_starttls=True,
-        authenticator=authenticator,
+        authenticator=RelayAuthenticator(),
         auth_required=True,
         auth_require_tls=True,
         data_size_limit=data_size_limit,
     )
 
-    # Port 25: legacy plain SMTP, STARTTLS available but not required,
-    # AUTH allowed without TLS for compatibility with older clients
+    # Port 25: plain SMTP only — no STARTTLS advertised (old clients may try
+    # STARTTLS opportunistically when it is offered, which breaks on modern TLS).
     ctrl_25 = RelayController(
         handler,
         hostname="0.0.0.0",
         port=25,
-        tls_context=ssl_ctx,
+        authenticator=RelayAuthenticator(),
+        auth_required=True,
+        auth_require_tls=False,
+        data_size_limit=data_size_limit,
+    )
+
+    # Legacy TLS port: optional STARTTLS with old cipher suites. Only credentials
+    # with legacy_tls enabled may authenticate here (enforced in RelayAuthenticator).
+    ctrl_legacy = RelayController(
+        handler,
+        hostname="0.0.0.0",
+        port=config.LEGACY_TLS_PORT,
+        tls_context=legacy_ssl_ctx,
         require_starttls=False,
-        authenticator=authenticator,
+        authenticator=RelayAuthenticator(requires_legacy_tls=True),
         auth_required=True,
         auth_require_tls=False,
         data_size_limit=data_size_limit,
@@ -130,8 +142,13 @@ def _start_controllers() -> None:
     ctrl_465.start()
     ctrl_587.start()
     ctrl_25.start()
-    _controllers = [ctrl_465, ctrl_587, ctrl_25]
-    logger.info("SMTP servers listening on ports 25 (legacy), 465 (SMTPS) and 587 (STARTTLS)")
+    ctrl_legacy.start()
+    _controllers = [ctrl_465, ctrl_587, ctrl_25, ctrl_legacy]
+    logger.info(
+        "SMTP servers listening on ports 25 (plain), 465 (SMTPS), 587 (STARTTLS), "
+        "%d (legacy TLS)",
+        config.LEGACY_TLS_PORT,
+    )
 
 
 def reload_ssl_context() -> None:

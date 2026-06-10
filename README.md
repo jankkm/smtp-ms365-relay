@@ -1,12 +1,12 @@
 # SMTP Relay
 
-A self-hosted SMTP relay that accepts email on ports **25** (legacy SMTP), **465** (SMTPS), and **587** (STARTTLS) and forwards it to recipients via the **Microsoft Graph API**. The web UI (port 5000) lets admins manage SMTP credentials, view sent emails, and configure the relay.
+A self-hosted SMTP relay that accepts email on ports **25** (plain legacy SMTP), **465** (SMTPS), **587** (STARTTLS), and **2587** (legacy TLS for old clients) and forwards it to recipients via the **Microsoft Graph API**. The web UI (port 5000) lets admins manage SMTP credentials, view sent emails, and configure the relay.
 
 ---
 
 ## Features
 
-- SMTP relay on ports 25 (legacy), 465 (SMTPS), and 587 (STARTTLS), AUTH PLAIN + LOGIN
+- SMTP relay on ports 25 (plain), 465 (SMTPS), 587 (STARTTLS), and 2587 (legacy TLS), AUTH PLAIN + LOGIN
 - Per-credential allow-lists for senders and recipients with wildcard support (`*@example.com`)
 - Credentials can be activated / deactivated without deletion
 - Emails forwarded via Microsoft Graph API (attachments up to **150 MB** each via upload sessions)
@@ -202,10 +202,14 @@ Configure your application or mail client:
 | Setting | Value |
 |---|---|
 | Host | Your server's hostname or IP |
-| Port | `587` (STARTTLS, recommended), `465` (SMTPS), or `25` (legacy — STARTTLS optional) |
+| Port | `587` (STARTTLS, recommended), `465` (SMTPS), `25` (plain legacy), or `2587` (legacy TLS — see below) |
 | Username | The credential username from the web UI |
 | Password | The credential password shown once at creation |
-| TLS | Required on 465/587 (self-signed — your client may need to trust it); optional on 25 |
+| TLS | Required on 465/587 (self-signed — your client may need to trust it); not offered on 25 |
+
+Port **25** is plain SMTP only (no STARTTLS). This avoids broken handshakes with old devices that opportunistically upgrade to TLS when STARTTLS is advertised.
+
+Port **2587** offers STARTTLS with legacy cipher suites (TLS 1.0–1.2). Enable **Legacy TLS ciphers** on the credential and point the client at this port when it requires TLS but cannot use modern ciphers on 587/465.
 
 The `from` address of sent emails must match one of the credential's **allowed senders**, and all `to` addresses must match one of the **allowed recipients**. Wildcards like `*@example.com` are supported.
 
@@ -265,7 +269,7 @@ ignoreregex =
 ```ini
 [smtp-relay]
 enabled  = true
-port     = 25,465,587
+port     = 25,465,587,2587
 filter   = smtp-relay
 backend  = systemd
 journalmatch = CONTAINER_NAME=smtp-relay-app-1

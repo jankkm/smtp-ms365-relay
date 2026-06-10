@@ -24,6 +24,9 @@ def _matches_any(address: str, patterns: list[str]) -> bool:
 class RelayAuthenticator:
     """Validates SMTP AUTH credentials against the database."""
 
+    def __init__(self, *, requires_legacy_tls: bool = False):
+        self.requires_legacy_tls = requires_legacy_tls
+
     def __call__(self, server, session, envelope, mechanism, auth_data):
         if not isinstance(auth_data, LoginPassword):
             return AuthResult(success=False, handled=True)
@@ -43,6 +46,14 @@ class RelayAuthenticator:
 
             if not bcrypt.checkpw(password.encode(), cred.hashed_password.encode()):
                 logger.warning("SMTP auth failed from %s: wrong password for '%s'", session.peer[0], username)
+                return AuthResult(success=False, handled=True)
+
+            if self.requires_legacy_tls and not cred.legacy_tls:
+                logger.warning(
+                    "SMTP auth failed from %s: user '%s' not enabled for legacy TLS port",
+                    session.peer[0],
+                    username,
+                )
                 return AuthResult(success=False, handled=True)
 
             # Capture allowed patterns in a plain dict so the session outlives the DB session

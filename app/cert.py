@@ -125,3 +125,15 @@ def create_ssl_context() -> ssl.SSLContext:
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(cert, key)
     return ctx
+
+
+def create_legacy_ssl_context() -> ssl.SSLContext:
+    """TLS context with lowered security for very old SMTP clients (printers, etc.)."""
+    cert = config.SMTP_CERT_FILE or CERT_FILE
+    key = config.SMTP_KEY_FILE or KEY_FILE
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1
+    ctx.maximum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_cert_chain(cert, key)
+    ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+    return ctx

@@ -50,6 +50,7 @@ def _migrate() -> None:
         ("smtp_credentials", "total_sent",   "INTEGER NOT NULL DEFAULT 0"),
         ("smtp_credentials", "last_used_at", "DATETIME"),
         ("smtp_credentials", "legacy_data",  "BOOLEAN NOT NULL DEFAULT 0"),
+        ("smtp_credentials", "legacy_tls",   "BOOLEAN NOT NULL DEFAULT 0"),
         ("smtp_credentials", "mode",         "TEXT NOT NULL DEFAULT 'active'"),
         ("smtp_credentials", "store_only",   "BOOLEAN NOT NULL DEFAULT 0"),
         ("smtp_credentials", "save_to_sent_items", "BOOLEAN NOT NULL DEFAULT 0"),

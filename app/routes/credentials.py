@@ -9,6 +9,7 @@ from app.auth import admin_required
 from app.database import get_db, get_request_db
 import app.email_storage as email_storage
 from app.models import EmailLog, SmtpCredential
+import app.config as config
 import app.graph as graph
 
 
@@ -37,7 +38,12 @@ def index():
     db = get_request_db()
     credentials = db.query(SmtpCredential).order_by(SmtpCredential.username).all()
     new_cred = session.pop("new_credential", None)
-    return render_template("credentials.html", credentials=credentials, new_cred=new_cred)
+    return render_template(
+        "credentials.html",
+        credentials=credentials,
+        new_cred=new_cred,
+        legacy_tls_port=config.LEGACY_TLS_PORT,
+    )
 
 
 @bp.route("/credentials/new", methods=["POST"])
@@ -67,6 +73,7 @@ def create():
         allowed_senders=json.dumps(senders),
         allowed_recipients=json.dumps(recipients),
         legacy_data=_form_checkbox("legacy_data"),
+        legacy_tls=_form_checkbox("legacy_tls"),
         store_only=_form_checkbox("store_only"),
         save_to_sent_items=_form_checkbox("save_to_sent_items"),
     )
@@ -91,6 +98,7 @@ def edit(cred_id: int):
     cred.allowed_senders = json.dumps(_parse_patterns(request.form.get("allowed_senders", "")))
     cred.allowed_recipients = json.dumps(_parse_patterns(request.form.get("allowed_recipients", "")))
     cred.legacy_data = _form_checkbox("legacy_data")
+    cred.legacy_tls = _form_checkbox("legacy_tls")
     cred.store_only = _form_checkbox("store_only")
     cred.save_to_sent_items = _form_checkbox("save_to_sent_items")
     db.commit()

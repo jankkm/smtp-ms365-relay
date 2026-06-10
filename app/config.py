@@ -31,3 +31,7 @@ SMTP_KEY_FILE: str | None = _env("SMTP_KEY_FILE")
 
 MAX_MESSAGE_SIZE_MB: int = max(1, int(_env("MAX_MESSAGE_SIZE_MB", "35") or "35"))
 MAX_MESSAGE_SIZE_BYTES: int = MAX_MESSAGE_SIZE_MB * 1024 * 1024
+
+# STARTTLS port for clients that require TLS but only support legacy ciphers.
+# Only credentials with legacy_tls enabled may authenticate here.
+LEGACY_TLS_PORT: int = 2587

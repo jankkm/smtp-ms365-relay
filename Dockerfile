@@ -13,6 +13,6 @@ COPY app/ ./app/
 
 RUN mkdir -p /app/data/certs
 
-EXPOSE 25 465 587 5000
+EXPOSE 25 465 587 2587 5000
 
 CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "120", "app.main:app"]

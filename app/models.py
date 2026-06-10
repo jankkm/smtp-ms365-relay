@@ -30,6 +30,7 @@ class SmtpCredential(Base):
     allowed_senders = Column(Text, default="[]")    # JSON list of patterns
     allowed_recipients = Column(Text, default="[]") # JSON list of patterns
     legacy_data = Column(Boolean, default=False, nullable=False)
+    legacy_tls = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     store_only = Column(Boolean, default=False, nullable=False)
     save_to_sent_items = Column(Boolean, default=False, nullable=False)
