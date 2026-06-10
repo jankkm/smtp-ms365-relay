@@ -18,6 +18,16 @@ A self-hosted SMTP relay that accepts email on ports **25** (plain legacy SMTP),
 
 ---
 
+## Screenshots
+
+![Dashboard](img/screen_dashboard.png)
+
+![Credentials](img/screen_credentials.png)
+
+<img src="img/screen_new.png" width="50%" alt="New Credential">
+
+---
+
 ## Prerequisites
 
 1. Docker and Docker Compose
