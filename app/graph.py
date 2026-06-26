@@ -81,7 +81,15 @@ def _parse_message(raw_eml: bytes) -> ParsedMessage:
     body_type = "Text"
     attachments: list[AttachmentPart] = []
 
+    def _part_text(part) -> str:
+        payload = part.get_content()
+        if isinstance(payload, str):
+            return payload
+        return payload.decode("utf-8", errors="replace")
+
     if msg.is_multipart():
+        html_body = ""
+        plain_body = ""
         for part in msg.walk():
             content_type = part.get_content_type()
             disposition = str(part.get("Content-Disposition", ""))
@@ -93,13 +101,17 @@ def _parse_message(raw_eml: bytes) -> ParsedMessage:
                     content_type=content_type,
                     data=raw,
                 ))
-            elif content_type == "text/html" and not body_content:
-                payload = part.get_content()
-                body_content = payload if isinstance(payload, str) else payload.decode("utf-8", errors="replace")
-                body_type = "HTML"
-            elif content_type == "text/plain" and not body_content:
-                payload = part.get_content()
-                body_content = payload if isinstance(payload, str) else payload.decode("utf-8", errors="replace")
+            elif content_type == "text/html" and not html_body:
+                html_body = _part_text(part)
+            elif content_type == "text/plain" and not plain_body:
+                plain_body = _part_text(part)
+
+        if html_body:
+            body_content = html_body
+            body_type = "HTML"
+        elif plain_body:
+            body_content = plain_body
+            body_type = "Text"
     else:
         payload = msg.get_content()
         if isinstance(payload, str):
